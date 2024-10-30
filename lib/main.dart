@@ -1,6 +1,5 @@
 import 'package:edufy/firebase_options.dart';
 import 'package:edufy/pages/auth_page.dart';
-import 'package:edufy/pages/login_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
