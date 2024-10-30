@@ -162,9 +162,9 @@ class _LoginPageState extends State<LoginPage> {
               // google sign in button
               const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   //Google button
-                  SquareTile(imagePath: "lib/images/Google_Icons-09-512.png"),
+                  const SquareTile(imagePath: "lib/images/Google_Icons-09-512.png"),
                 ],
               ),
 
@@ -172,13 +172,13 @@ class _LoginPageState extends State<LoginPage> {
               // not a member register
               const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     "Not a member?",
                     style: TextStyle(color: Colors.grey),
                   ),
-                  SizedBox(width: 4),
-                  Text(
+                  const SizedBox(width: 4),
+                  const Text(
                     "Register Now",
                     style: TextStyle(
                         color: Colors.blue, fontWeight: FontWeight.bold),
