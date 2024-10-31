@@ -1,6 +1,7 @@
 import 'package:edufy/components/my_button.dart';
 import 'package:edufy/components/my_textfield.dart';
 import 'package:edufy/components/square_tile.dart';
+import 'package:edufy/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -152,11 +153,12 @@ class _RegisterPageState extends State<RegisterPage> {
                   height: 30,
                 ),
                 // google sign in button
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     //Google button
-                    const SquareTile(
+                    SquareTile(
+                        onTap: () => AuthService().signInWithGoogle(),
                         imagePath: "lib/images/Google_Icons-09-512.png"),
                   ],
                 ),
