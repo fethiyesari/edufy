@@ -7,9 +7,10 @@ class Books extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 100,
         backgroundColor: Colors.deepPurple,
         title: const Text(
-          "Edufy",
+          "Kitaplar",
           style: TextStyle(
             fontSize: 30,
             color: Colors.white,
