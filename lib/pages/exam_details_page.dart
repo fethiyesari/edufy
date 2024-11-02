@@ -16,6 +16,12 @@ class ExamDetailsPage extends StatelessWidget {
     required this.emptyAnswers,
   });
 
+  // Net hesaplayan fonksiyon
+  double _calculateNetScore() {
+    double deductedCorrectAnswers = wrongAnswers / 4;
+    return correctAnswers - deductedCorrectAnswers;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,6 +53,61 @@ class ExamDetailsPage extends StatelessWidget {
                 _buildCircularIndicator('Yanlış', wrongAnswers, Colors.red),
                 _buildCircularIndicator('Boş', emptyAnswers, Colors.grey),
               ],
+            ),
+            const SizedBox(height: 20),
+            // Net puanı gösteren yuvarlak köşeli dikdörtgen
+            Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurpleAccent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Net Puan',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _calculateNetScore().toStringAsFixed(2),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Ortasında küçük bir yuvarlak olan çizgi
+            Center(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    height: 2,
+                    width: MediaQuery.of(context).size.width * 2,
+                    color: Colors.grey, // Çizgi rengi
+                  ),
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: const BoxDecoration(
+                      color: Colors.grey, // Yuvarlağın rengi
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
