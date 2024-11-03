@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:edufy/components/exam_card_tile.dart';
 import 'package:edufy/pages/exam_details_page.dart';
 import 'package:edufy/pages/gemini_page.dart';
@@ -12,36 +13,46 @@ class Exams extends StatefulWidget {
 }
 
 class _ExamsState extends State<Exams> {
-  List<Map<String, dynamic>> exams = []; // Kart verilerini tutmak için liste
+  List<Map<String, dynamic>> exams = [];
 
   @override
   void initState() {
     super.initState();
-    fetchExamsFromFirestore(); // Firebase'den sınav verilerini çek
+    fetchExamsFromFirestore();
   }
 
-  // Firebase’den sınavları çekme fonksiyonu
+  // Firebase’den sınavları çekme fonksiyonu (kullanıcıya göre)
   Future<void> fetchExamsFromFirestore() async {
-    final snapshot = await FirebaseFirestore.instance.collection('exams').get();
-    setState(() {
-      exams = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['docId'] = doc.id; // Her belgeye docId ekle
-        return data;
-      }).toList();
-    });
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('exams')
+          .where('userId', isEqualTo: userId) // Kullanıcıya göre filtrele
+          .get();
+      setState(() {
+        exams = snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          data['docId'] = doc.id;
+          return data;
+        }).toList();
+      });
+    }
   }
 
-  // Firebase’e sınav ekleyen fonksiyon
+  // Firebase’e sınav ekleyen fonksiyon (UID ile)
   Future<void> addExamToFirestore(
       String title, int correct, int wrong, int empty) async {
-    await FirebaseFirestore.instance.collection('exams').add({
-      'title': title,
-      'date': DateTime.now().toString(),
-      'correct': correct,
-      'wrong': wrong,
-      'empty': empty,
-    });
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      await FirebaseFirestore.instance.collection('exams').add({
+        'title': title,
+        'date': DateTime.now().toString(),
+        'correct': correct,
+        'wrong': wrong,
+        'empty': empty,
+        'userId': userId, // Kullanıcı UID'sini ekle
+      });
+    }
   }
 
   // Firestore’da sınav verisini güncelleme fonksiyonu

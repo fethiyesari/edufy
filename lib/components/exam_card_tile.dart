@@ -11,7 +11,6 @@ class ExamCardTile extends StatelessWidget {
     required this.date,
     required this.onTap,
   }) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
