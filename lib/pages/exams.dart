@@ -1,6 +1,7 @@
 import 'package:edufy/components/exam_card_tile.dart';
 import 'package:edufy/pages/exam_details_page.dart';
 import 'package:edufy/pages/exams.dart';
+import 'package:edufy/pages/gemini_page.dart';
 import 'package:flutter/material.dart';
 
 class Exams extends StatefulWidget {
@@ -147,6 +148,13 @@ class _ExamsState extends State<Exams> {
     );
   }
 
+  void showGeminiChat(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => GeminiChatPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -256,8 +264,10 @@ class _ExamsState extends State<Exams> {
             child: Align(
               alignment: Alignment.bottomLeft,
               child: FloatingActionButton.large(
-                onPressed: () {}, // İlk buton için bir işlev belirleyin
-                backgroundColor: Colors.grey[350],
+                onPressed: () {
+                  showGeminiChat(context);
+                }, // İlk buton için bir işlev belirleyin
+                backgroundColor: Colors.grey[100],
                 child: Image.asset(
                   'lib/images/gemini.png', // İkonun yolunu belirtiyoruz
                   width: 48, // Boyutu butona göre ayarlayabilirsiniz
@@ -273,7 +283,7 @@ class _ExamsState extends State<Exams> {
               alignment: Alignment.bottomRight,
               child: FloatingActionButton.large(
                 onPressed: _addExamCard, // Artı butonuna basınca kart ekle
-                backgroundColor: Colors.grey[350],
+                backgroundColor: Colors.grey[100],
                 child: const Icon(Icons.add),
               ),
             ),

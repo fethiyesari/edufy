@@ -13,6 +13,12 @@ dependencies:
   firebase_auth: ^5.3.1
   google_sign_in: ^6.2.1
   cloud_firestore: ^5.4.4
+  google_generative_ai: ^0.4.6
+  flutter_gemini: ^2.0.5
+  image_picker: ^1.1.2
+  dash_chat_2: ^0.0.21
+  flutter_dotenv: ^5.0.2
+  http: ^1.2.2
 
 dev_dependencies:
   flutter_test:
