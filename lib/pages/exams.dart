@@ -1,8 +1,8 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:edufy/components/exam_card_tile.dart';
 import 'package:edufy/pages/exam_details_page.dart';
-import 'package:edufy/pages/exams.dart';
 import 'package:edufy/pages/gemini_page.dart';
-import 'package:flutter/material.dart';
 
 class Exams extends StatefulWidget {
   const Exams({super.key});
@@ -14,20 +14,57 @@ class Exams extends StatefulWidget {
 class _ExamsState extends State<Exams> {
   List<Map<String, dynamic>> exams = []; // Kart verilerini tutmak için liste
 
+  @override
+  void initState() {
+    super.initState();
+    fetchExamsFromFirestore(); // Firebase'den sınav verilerini çek
+  }
+
+  // Firebase’den sınavları çekme fonksiyonu
+  Future<void> fetchExamsFromFirestore() async {
+    final snapshot = await FirebaseFirestore.instance.collection('exams').get();
+    setState(() {
+      exams = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['docId'] = doc.id; // Her belgeye docId ekle
+        return data;
+      }).toList();
+    });
+  }
+
+  // Firebase’e sınav ekleyen fonksiyon
+  Future<void> addExamToFirestore(
+      String title, int correct, int wrong, int empty) async {
+    await FirebaseFirestore.instance.collection('exams').add({
+      'title': title,
+      'date': DateTime.now().toString(),
+      'correct': correct,
+      'wrong': wrong,
+      'empty': empty,
+    });
+  }
+
+  // Firestore’da sınav verisini güncelleme fonksiyonu
+  Future<void> editExamInFirestore(String docId, String newTitle) async {
+    await FirebaseFirestore.instance.collection('exams').doc(docId).update({
+      'title': newTitle,
+    });
+  }
+
+  // Firestore’dan sınav silme fonksiyonu
+  Future<void> deleteExamFromFirestore(String docId) async {
+    await FirebaseFirestore.instance.collection('exams').doc(docId).delete();
+  }
+
   void _addExamCard() {
-    String examTitle = '';
-    int correctAnswers = 0;
-    int wrongAnswers = 0;
-    int emptyAnswers = 0;
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController correctController = TextEditingController();
+    final TextEditingController wrongController = TextEditingController();
+    final TextEditingController emptyController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) {
-        final TextEditingController titleController = TextEditingController();
-        final TextEditingController correctController = TextEditingController();
-        final TextEditingController wrongController = TextEditingController();
-        final TextEditingController emptyController = TextEditingController();
-
         return AlertDialog(
           title: const Text('Yeni Sınav Ekleyin'),
           content: SingleChildScrollView(
@@ -71,29 +108,15 @@ class _ExamsState extends State<Exams> {
               child: const Text('İptal'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 final title = titleController.text;
                 final correct = int.tryParse(correctController.text) ?? 0;
                 final wrong = int.tryParse(wrongController.text) ?? 0;
                 final empty = int.tryParse(emptyController.text) ?? 0;
 
                 if (title.isNotEmpty) {
-                  final newExam = {
-                    'title': title,
-                    'date': DateTime.now().toString(),
-                    'correct': correct,
-                    'wrong': wrong,
-                    'empty': empty,
-                  };
-
-                  setState(() {
-                    exams.add(newExam); // Kartı listeye ekle
-                  });
-
-                  titleController.clear();
-                  correctController.clear();
-                  wrongController.clear();
-                  emptyController.clear(); // TextField'ları temizle
+                  await addExamToFirestore(title, correct, wrong, empty);
+                  await fetchExamsFromFirestore(); // Yeni sınav eklendikten sonra veriyi güncelle
                 }
 
                 Navigator.of(context).pop(); // Dialogu kapat
@@ -129,13 +152,16 @@ class _ExamsState extends State<Exams> {
               child: const Text('İptal'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 final title = _controller.text;
 
                 if (title.isNotEmpty) {
                   setState(() {
-                    exams[index]['title'] = title; // Başlığı güncelle
+                    exams[index]['title'] = title; // Local listeyi güncelle
                   });
+
+                  // Firebase Firestore'da da güncelle
+                  await editExamInFirestore(exams[index]['docId'], title);
                 }
 
                 Navigator.of(context).pop(); // Dialogu kapat
@@ -186,8 +212,9 @@ class _ExamsState extends State<Exams> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: const Icon(Icons.delete, color: Colors.white),
             ),
-            confirmDismiss: (direction) {
+            confirmDismiss: (direction) async {
               if (direction == DismissDirection.endToStart) {
+                // Sağdan sola kaydırıldığında (silme işlemi)
                 return showDialog(
                   context: context,
                   builder: (context) {
@@ -201,9 +228,15 @@ class _ExamsState extends State<Exams> {
                           child: const Text('Hayır'),
                         ),
                         TextButton(
-                          onPressed: () {
+                          onPressed: () async {
+                            final docId = exams[index]['docId'];
+
+                            // Firebase’den sınavı sil
+                            await deleteExamFromFirestore(docId);
+
                             setState(() {
-                              exams.removeAt(index); // Sınavı sil
+                              exams
+                                  .removeAt(index); // Yerel listeyi de güncelle
                             });
                             Navigator.of(context).pop(true);
                           },
@@ -214,13 +247,14 @@ class _ExamsState extends State<Exams> {
                   },
                 );
               } else if (direction == DismissDirection.startToEnd) {
-                _editExamCard(
-                    index); // Sola kaydırıldığında düzenleme dialogunu aç
+                // Soldan sağa kaydırıldığında (düzenleme işlemi)
+                _editExamCard(index);
                 return Future.value(
-                    false); // İlgili işlemi gerçekleştirdikten sonra false döndür
+                    false); // Düzenleme yapıldıktan sonra false döndür
               }
               return Future.value(false);
             },
+
             child: GestureDetector(
               onTap: () {
                 // Kart tıklandığında detay sayfasına git
