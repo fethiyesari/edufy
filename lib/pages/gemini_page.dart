@@ -1,12 +1,8 @@
-import 'dart:ffi';
-import 'dart:io';
-import 'dart:typed_data';
-
-import 'package:dash_chat_2/dash_chat_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
-import 'package:http/http.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dash_chat_2/dash_chat_2.dart';
 
 class GeminiChatPage extends StatefulWidget {
   const GeminiChatPage({super.key});
@@ -16,108 +12,103 @@ class GeminiChatPage extends StatefulWidget {
 }
 
 class _GeminiChatPageState extends State<GeminiChatPage> {
-  final Gemini gemini = Gemini.instance;
-
+  final Gemini gemini = Gemini.instance; // Gemini instance'ını tanımlıyoruz
   List<ChatMessage> messages = [];
-
-  ChatUser currentUser = ChatUser(id: "0", firstName: "User");
-  ChatUser geminiUser = ChatUser(
-      id: "1", firstName: "Gemini", profileImage: "lib/images/gemini.png");
+  ChatUser currentUser = ChatUser(id: "0", firstName: "User"); // Kullanıcı
+  ChatUser geminiUser =
+      ChatUser(id: "1", firstName: "Gemini"); // Gemini kullanıcısı
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 100,
-        backgroundColor: Colors.deepPurple,
-        title: const Text(
-          "Gemini",
-          style: TextStyle(
-            fontSize: 30,
-            color: Colors.white,
-          ),
-        ),
-      ),
-      body: _buildUI(),
+  void initState() {
+    super.initState();
+    _fetchAndAnalyzeExamData(); // Sayfa açıldığında Firebase'den veri çekiyoruz
+  }
+
+  // Adım 1: Firebase'den veriyi çekip özet oluşturma
+  Future<void> _fetchAndAnalyzeExamData() async {
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('exams')
+        .where('userId', isEqualTo: userId)
+        .get();
+
+    // Sınav verilerini özetliyoruz
+    String examSummary = "Sınav Verileri:\n";
+    for (var doc in snapshot.docs) {
+      var data = doc.data();
+      examSummary +=
+          "Başlık: ${data['title']}, Doğru: ${data['correct']}, Yanlış: ${data['wrong']}, Boş: ${data['empty']}\n";
+    }
+
+    // Bu özeti Gemini'ye gönderiyoruz
+    _sendMessageToGemini(examSummary);
+  }
+
+  // Adım 2: Veriyi Gemini'ye gönderip analiz ettirme
+  void _sendMessageToGemini(String messageText) {
+    final ChatMessage chatMessage = ChatMessage(
+      user: currentUser,
+      text: messageText,
+      createdAt: DateTime.now(),
     );
-  }
 
-  Widget _buildUI() {
-    return DashChat(
-        inputOptions: InputOptions(trailing: [
-          IconButton(
-              onPressed: _sendMediaMessage,
-              icon: const Icon(
-                Icons.image,
-              ))
-        ]),
-        currentUser: currentUser,
-        onSend: _sendMessage,
-        messages: messages);
-  }
-
-  void _sendMessage(ChatMessage chatMessage) {
     setState(() {
       messages = [chatMessage, ...messages];
     });
 
-    try {
-      String question = chatMessage.text;
-      List<Uint8List>? images;
-      if (chatMessage.medias?.isNotEmpty ?? false) {
-        images = [
-          File(chatMessage.medias!.first.url).readAsBytesSync(),
-        ];
-      }
-      gemini.streamGenerateContent(question).listen((event) {
-        ChatMessage? lastMessage = messages.firstOrNull;
-        if (lastMessage != null && lastMessage.user == geminiUser) {
-          lastMessage = messages.removeAt(0);
-          String response = event.content?.parts?.fold(
-                  "", (previous, current) => "$previous ${current.text}") ??
-              "";
+    gemini.streamGenerateContent(messageText).listen((event) {
+      String response = event.content?.parts
+              ?.fold("", (previous, current) => "$previous ${current.text}") ??
+          "";
 
-          lastMessage.text += response;
-          setState(() {
-            messages = [lastMessage!, ...messages];
-          });
-        } else {
-          String response = event.content?.parts?.fold(
-                  "", (previous, current) => "$previous ${current.text}") ??
-              "";
-          ChatMessage message = ChatMessage(
-            user: geminiUser,
-            createdAt: DateTime.now(),
-            text: response,
-          );
-          setState(() {
-            messages = [message, ...messages];
-          });
-        }
+      ChatMessage message = ChatMessage(
+        user: geminiUser,
+        text: response,
+        createdAt: DateTime.now(),
+      );
+
+      setState(() {
+        messages = [message, ...messages];
       });
-    } catch (e) {
-      print(e);
-    }
+    });
   }
 
-  void _sendMediaMessage() async {
-    ImagePicker picker = ImagePicker();
-    XFile? file = await picker.pickImage(
-      source: ImageSource.gallery,
-    );
-    if (file != null) {
-      ChatMessage chatMessage = ChatMessage(
-        user: currentUser,
+  // Kullanıcıdan gelen mesajları işleyen onSend işlevi
+  void _handleUserMessage(ChatMessage message) {
+    setState(() {
+      messages = [message, ...messages];
+    });
+
+    // Kullanıcı mesajını yalnızca Gemini'ye gönderiyoruz
+    gemini.streamGenerateContent(message.text).listen((event) {
+      String response = event.content?.parts
+              ?.fold("", (previous, current) => "$previous ${current.text}") ??
+          "";
+
+      ChatMessage replyMessage = ChatMessage(
+        user: geminiUser,
+        text: response,
         createdAt: DateTime.now(),
-        medias: [
-          ChatMedia(
-            url: file.path,
-            fileName: "",
-            type: MediaType.image,
-          )
-        ],
       );
-      _sendMessage(chatMessage);
-    }
+
+      setState(() {
+        messages = [replyMessage, ...messages];
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Gemini Chat")),
+      body: DashChat(
+        inputOptions: InputOptions(),
+        currentUser: currentUser,
+        messages: messages,
+        onSend: _handleUserMessage, // Gerekli onSend parametresi eklendi
+      ),
+    );
   }
 }
